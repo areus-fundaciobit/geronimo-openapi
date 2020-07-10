@@ -21,13 +21,15 @@ import static org.apache.maven.plugins.annotations.LifecyclePhase.PROCESS_CLASSE
 import static org.apache.maven.plugins.annotations.ResolutionScope.COMPILE_PLUS_RUNTIME;
 
 import java.io.File;
-import java.io.FileWriter;
+import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.OutputStreamWriter;
 import java.io.Writer;
 import java.lang.reflect.InvocationTargetException;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.net.URLClassLoader;
+import java.nio.charset.Charset;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Map;
@@ -61,6 +63,9 @@ public class OpenAPIMojo extends AbstractMojo {
 
     @Parameter(property = "geronimo-openapi.output", defaultValue = "${project.build.outputDirectory}/META-INF/classes/openapi.json")
     protected File output;
+
+    @Parameter(property = "geronimo-openapi.encoding", defaultValue = "${project.build.sourceEncoding}")
+    protected String encoding;
 
     @Parameter
     protected String application;
@@ -156,9 +161,16 @@ public class OpenAPIMojo extends AbstractMojo {
         }
         api.info(info);
 
+        final Charset charset;
+        if (encoding == null) {
+            charset = Charset.defaultCharset();
+        } else {
+            charset = Charset.forName(this.encoding);
+        }
+
         output.getParentFile().mkdirs();
         try (final Jsonb jsonb = JsonbBuilder.create(new JsonbConfig().withFormatting(prettify));
-             final Writer writer = new FileWriter(output)) {
+             final Writer writer = new OutputStreamWriter(new FileOutputStream(output), charset)) {
             jsonb.toJson(api, writer);
         } catch (final Exception e) {
             throw new MojoExecutionException(e.getMessage(), e);
